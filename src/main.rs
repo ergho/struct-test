@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Number;
+use chrono::{DateTime, Utc};
 extern crate reqwest;
 extern crate tokio;
 
@@ -86,7 +87,7 @@ struct Receive {
     league_id: u32,
     pay_currency_id: u32,
     get_currency_id: u32,
-    //sample_time_utc: TimeformatOfSomeKind,
+    sample_time_utc: DateTime<Utc>,
     count: u32,
     value: f64,
     data_point_count: u32,
@@ -103,7 +104,6 @@ struct Languages {
 #[serde(rename_all = "camelCase")]
 struct Sparkline {
     data: Vec<Option<Number>>,
-    //data: [Option<Number>; 7],
     total_change: Number,
 }
 
@@ -113,7 +113,7 @@ struct Pay {
     league_id: u32,
     pay_currency_id: u32,
     get_currency_id: u32,
-    //    sample_time_utc: TimeformatOfSomeKind,
+    sample_time_utc: DateTime<Utc>,
     count: u32,
     value: f64,
     data_point_count: u32,
