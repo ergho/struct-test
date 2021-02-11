@@ -1,47 +1,113 @@
-#![allow(non_snake_case)]
-
 use serde::{Deserialize, Serialize};
+use serde_json::Number;
+extern crate reqwest;
+extern crate tokio;
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct CurrencyOverview {
     lines: Vec<Currency>,
-    currencyDetails: Vec<ItemInfo>,
-    language: Vec<String>,
+    currency_details: Vec<ItemInfo>,
+    language: Languages,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+struct ItemOverview {
+    lines: Vec<Item>,
+    language: Languages,
+}
+
+// A few more option values than i would have liked...
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Item {
+    id: u32,
+    name: String,
+    icon: String,
+    map_tier: u32,
+    level_required: u32,
+    base_type: Option<String>,
+    stack_size: u32,
+    variant: Option<String>,
+    prophecy_text: Option<String>,
+    art_filename: Option<String>,
+    links: u32,
+    item_class: u32,
+    sparkline: Sparkline,
+    low_confidence_sparkline: Sparkline,
+    implicit_modifiers: Option<Vec<Modifiers>>,
+    explicit_modifiers: Option<Vec<Modifiers>>,
+    flavour_text: String,
+    corrupted: bool,
+    gem_level: u32,
+    gem_quality: u32,
+    item_type: String,
+    chaos_value: f64,
+    exalted_value: f64,
+    count: u32,
+    details_id: String,
+    trade_info: Option<String>,
+    map_region: Option<String>,
+    listing_count: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Modifiers {
+    text: String,
+    optional: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct Currency {
     currency_type_name: String,
-    pay: Pay,
-    //    receive: Receive,
-    //    paySparkLine: Paysparkline,
-    //    receieveSparkLine: Receivesparkline,
+    pay: Option<Pay>,
+    receive: Receive,
+    pay_spark_line: Sparkline,
+    receive_spark_line: Sparkline,
     chaos_equivalent: f64,
-    //    lowConfidencePaySparkLine: Lowconfidencepaysparkline,
-    //    lowConfidenceReceiveSparkLine: Lowconfidencereceivesparkline,
+    low_confidence_pay_spark_line: Sparkline,
+    low_confidence_receive_spark_line: Sparkline,
     details_id: String,
 }
 
-impl Currency {
-    fn new(name: &str, value: &str) -> Currency {
-        Currency {
-            currency_type_name: name.to_string(),
-            pay: Pay::new(),
-            chaos_equivalent: value.parse().unwrap(),
-            details_id: Currency::gen_detailsid(name),
-        }
-    }
-
-    fn gen_detailsid(name: &str) -> String {
-        let name = str::replace(name, " ", "-");
-        name.to_ascii_lowercase()
-    }
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ItemInfo {
+    id: u32,
+    icon: String,
+    name: String,
+    trade_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct ItemInfo {}
+struct Receive {
+    id: u32,
+    league_id: u32,
+    pay_currency_id: u32,
+    get_currency_id: u32,
+    //sample_time_utc: TimeformatOfSomeKind,
+    count: u32,
+    value: f64,
+    data_point_count: u32,
+    includes_secondary: bool,
+    listing_count: u32,
+}
 
 #[derive(Debug, Deserialize, Serialize)]
+struct Languages {
+    name: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Sparkline {
+    data: Vec<Option<Number>>,
+    //data: [Option<Number>; 7],
+    total_change: Number,
+}
+
+#[derive(Debug, Deserialize, Serialize, Copy, Clone)]
 struct Pay {
     id: u32,
     league_id: u32,
@@ -55,46 +121,29 @@ struct Pay {
     listing_count: u32,
 }
 
-impl Pay {
-    fn new() -> Pay {
-        Pay {
-            id: 1,
-            league_id: 1,
-            pay_currency_id: 1,
-            get_currency_id: 1,
-            count: 1,
-            value: 1.0,
-            data_point_count: 1,
-            includes_secondary: false,
-            listing_count: 1,
-        }
-    }
-}
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let body = reqwest::get(
+        "https://poe.ninja/api/data/currencyoverview?league=Ritual&type=Currency&language=en",
+    )
+    .await?
+    .text()
+    .await?;
 
-fn main() {
-    let m = Currency::new("Mirror of Kalandra", "15000");
-    //    let hi = Currency {
-    //        currency_type_name: String::from("Mirror of Kalandra"),
-    //        chaos_equivalent: 14542.26,
-    //        details_id: String::from("mirror-of-kalandra"),
-    //    };
-    //
-    println!("{}", m.details_id);
-    println!("{}", m.chaos_equivalent);
-    println!("{}", m.currency_type_name);
+    let item_body = reqwest::get(
+        "https://poe.ninja/api/data/ItemOverview?league=Ritual&type=Invitation&language=en",
+    )
+    .await?
+    .text()
+    .await?;
 
-    let k = Currency::new("MirrorShard", "2000");
+    let v: CurrencyOverview = serde_json::from_str(&body)?;
+    let item: ItemOverview = serde_json::from_str(&item_body)?;
 
-    println!("{}", k.details_id);
-
-    //    let json = r#"
-    //        {
-    //        "currency_type_name": "Chaos Orb",
-    //        "chaos_equivalent": 1.0,
-    //        "details_id": "chaos-orb"
-    //        }
-    //    "#;
-    //
-    let json = serde_json::to_string(&m).expect("Failed to serialize Currency");
-    println!("{}", json);
+    println!("{:?}", v.lines[0].currency_type_name);
+    println!("{:?}", v.lines[0].pay.unwrap());
+    println!("{:?}", v.currency_details[0].name);
+    println!("{:?}", v.language.name);
+    println!("{:?}", item.lines[0].low_confidence_sparkline);
+    Ok(())
 }
