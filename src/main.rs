@@ -145,6 +145,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{:?}", v.currency_details[0].name);
     println!("{:?}", v.language.name);
     println!("{:?}", item.lines[0].low_confidence_sparkline);
+
     //maybe do something more than just deserialize now?
+
     Ok(())
 }
